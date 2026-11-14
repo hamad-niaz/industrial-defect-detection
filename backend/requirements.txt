@@ -8,3 +8,5 @@ numpy
 python-multipart
 streamlit
 requests
+pytest
+httpx
