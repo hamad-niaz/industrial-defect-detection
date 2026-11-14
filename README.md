@@ -13,6 +13,19 @@ An AI-powered industrial anomaly detection system that identifies defective bott
 - Streamlit interactive dashboard
 - CPU-based local inference
 
+
+## Dashboard Screenshots
+
+### Main Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Prediction Result
+![Prediction Result](screenshots/prediction-result.png)
+
+### Defect Heatmap
+![Defect Heatmap](screenshots/defect-heatmap.png)
+
+
 ## Model Architecture
 
 This project uses a lightweight PatchCore-like anomaly detection approach.
