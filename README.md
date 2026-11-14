@@ -76,8 +76,8 @@ Industrial-Defect-Detection/
 Clone the repository:
 
 ```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-cd Industrial-Defect-Detection
+git clone https://github.com/hamad-niaz/industrial-defect-detection.git
+cd industrial-defect-detection
 ```
 
 Create virtual environment:
