@@ -16,14 +16,16 @@ An AI-powered industrial anomaly detection system that identifies defective bott
 
 ## Dashboard Screenshots
 
+## Dashboard Screenshots
+
 ### Main Dashboard
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](dashboard.jpeg)
 
 ### Prediction Result
-![Prediction Result](screenshots/prediction-result.png)
+![Prediction Result](prediction-result.png)
 
 ### Defect Heatmap
-![Defect Heatmap](screenshots/defect-heatmap.png)
+![Defect Heatmap](defect-heatmap.png)
 
 
 ## Model Architecture
