@@ -1,3 +1,4 @@
+
 import io
 import base64
 from pathlib import Path
@@ -27,7 +28,6 @@ MODEL_PATH = BASE_DIR / "models" / "patchcore_final.pth"
 
 device = torch.device("cpu")
 
-# Demo threshold. This is provisional, not a production-validated threshold.
 ANOMALY_THRESHOLD = 2.85
 
 
@@ -79,11 +79,17 @@ checkpoint = torch.load(
     weights_only=True
 )
 
-feature_extractor.load_state_dict(checkpoint["feature_extractor"])
+feature_extractor.load_state_dict(
+    checkpoint["feature_extractor"]
+)
+
 feature_extractor.to(device)
 feature_extractor.eval()
 
 memory_bank = checkpoint["memory_bank"].float().to(device)
+
+del checkpoint
+del backbone
 
 print("Model loaded successfully!")
 print("Memory bank shape:", memory_bank.shape)
@@ -104,8 +110,13 @@ def preprocess_image(image):
     image_tensor = torch.from_numpy(image_array)
     image_tensor = image_tensor.permute(2, 0, 1)
 
-    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
-    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+    mean = torch.tensor(
+        [0.485, 0.456, 0.406]
+    ).view(3, 1, 1)
+
+    std = torch.tensor(
+        [0.229, 0.224, 0.225]
+    ).view(3, 1, 1)
 
     image_tensor = (image_tensor - mean) / std
 
@@ -127,7 +138,6 @@ def create_heatmap(anomaly_map):
         heatmap_max - heatmap_min + 1e-8
     )
 
-    # Convert grayscale intensity into a simple RGB heatmap.
     red = np.clip(heatmap * 3, 0, 1)
     green = np.clip(heatmap * 3 - 1, 0, 1)
     blue = np.clip(heatmap * 3 - 2, 0, 1)
@@ -140,7 +150,9 @@ def create_heatmap(anomaly_map):
     buffer = io.BytesIO()
     heatmap_image.save(buffer, format="PNG")
 
-    return base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return base64.b64encode(
+        buffer.getvalue()
+    ).decode("utf-8")
 
 
 # -----------------------------
@@ -151,7 +163,7 @@ def detect_anomaly(image):
 
     input_tensor = preprocess_image(image)
 
-    with torch.no_grad():
+    with torch.inference_mode():
 
         features_layer2, features_layer3 = feature_extractor(
             input_tensor
@@ -173,11 +185,36 @@ def detect_anomaly(image):
             0, 2, 3, 1
         ).reshape(-1, 384)
 
-        distances = torch.cdist(patches, memory_bank)
+        del features_layer2
+        del features_layer3
+        del combined_features
 
-        nearest_distances = distances.min(dim=1).values
+        nearest_distances_list = []
 
-        anomaly_map = nearest_distances.reshape(1, 1, 28, 28)
+        for patch_chunk in patches.split(64):
+
+            chunk_distances = torch.cdist(
+                patch_chunk,
+                memory_bank
+            )
+
+            chunk_nearest = chunk_distances.min(dim=1).values
+
+            nearest_distances_list.append(chunk_nearest)
+
+            del chunk_distances
+            del chunk_nearest
+
+        nearest_distances = torch.cat(
+            nearest_distances_list
+        )
+
+        del nearest_distances_list
+        del patches
+
+        anomaly_map = nearest_distances.reshape(
+            1, 1, 28, 28
+        )
 
         anomaly_map = F.interpolate(
             anomaly_map,
@@ -235,15 +272,23 @@ def health():
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
 
-    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+    if file.content_type not in [
+        "image/jpeg",
+        "image/png",
+        "image/jpg"
+    ]:
         raise HTTPException(
             status_code=400,
             detail="Please upload a JPG or PNG image."
         )
 
     try:
+
         image_bytes = await file.read()
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+        image = Image.open(
+            io.BytesIO(image_bytes)
+        ).convert("RGB")
 
         result = detect_anomaly(image)
 
@@ -256,6 +301,7 @@ async def predict(file: UploadFile = File(...)):
         raise
 
     except Exception as error:
+
         raise HTTPException(
             status_code=500,
             detail=f"Prediction failed: {str(error)}"
